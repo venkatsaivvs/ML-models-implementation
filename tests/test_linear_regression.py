@@ -20,6 +20,14 @@ def test_linear_regression_gd():
     print(f"Weights: {lr.weights}")  # This will show with -s flag
 
 #write additional tests for the linear regression model - I am following a test driven development approach
+#test for mean squared error loss
+def test_mean_squared_error_loss():
+    y_true = np.array([1, 2, 3])
+    y_pred = np.array([1, 2, 3])
+    loss = LinearRegressionGD._mse_loss(y_true, y_pred)
+    assert loss == 0.0
+
+
 
 def test_empty_data():
     X = np.array([])

@@ -16,9 +16,6 @@ Linear Regression Mathematical Formulation:
    = (1/n) * (y - Xβ)ᵀ(y - Xβ)
    = (1/n) * ||y - Xβ||²
 
-
-
-
 3. Gradient: ∇J(β) = (2/n) * Xᵀ(Xβ - y)
 J(β) = (1/n) * (y - Xβ)ᵀ(y - Xβ)
      = (1/n) * (yᵀ - βᵀXᵀ)(y - Xβ)
