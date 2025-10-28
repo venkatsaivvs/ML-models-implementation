@@ -1,6 +1,12 @@
 import numpy as np
 
 """
+add intercept
+loss
+gradient
+
+fit - iterate over epochs, predict, gradient, weights, loss
+l1
 Linear Regression Mathematical Formulation:
 
 1. Prediction: ŷ = Xβ
@@ -18,6 +24,7 @@ J(β) = (1/n) * (y - Xβ)ᵀ(y - Xβ)
      = (1/n) * (yᵀ - βᵀXᵀ)(y - Xβ)
      = (1/n) * (yᵀy - yᵀXβ - βᵀXᵀy + βᵀXᵀXβ)
      J(β) = (1/n) * (yᵀy - 2βᵀXᵀy + βᵀXᵀXβ)
+     derivative of J(β) with respect to β is 
      ∇J(β) = (1/n) * ∇(yᵀy - 2βᵀXᵀy + βᵀXᵀXβ)
 
      ∇J(β) = (1/n) * (0 - 2Xᵀy + 2XᵀXβ)
@@ -29,30 +36,27 @@ J(β) = (1/n) * (y - Xβ)ᵀ(y - Xβ)
 """
 
 class LinearRegressionGD:
-    def __init__(self, learning_rate: float = 0.01, epochs: int = 1000, fit_intercept: bool = True, verbose: bool = False, random_state: int | None = None):
+    def __init__(self, learning_rate: float = 0.01, epochs: int = 1000, verbose: bool = False, random_state: int | None = None):
         self.learning_rate = learning_rate
         self.epochs = epochs
-        self.fit_intercept = fit_intercept
         self.verbose = verbose
         self.random_state = random_state
         self.weights: np.ndarray | None = None
 
     def _add_intercept(self, X: np.ndarray) -> np.ndarray:
-        if not self.fit_intercept:
-            return X
         ones = np.ones((X.shape[0], 1), dtype=X.dtype)
         return np.concatenate([ones, X], axis=1)
 
-    def _initialize_weights(self, n_features: int) -> None:
-        rng = np.random.default_rng(self.random_state)
-        self.weights = rng.normal(loc=0.0, scale=0.01, size=(n_features,))
+    def _initialize_weights(self, X: np.ndarray) -> None:
+        n_features = X.shape[1]
+        np.random.seed(self.random_state)
+        self.weights = np.random.normal(loc=0.0, scale=0.01, size=(n_features,))
 
     @staticmethod
     def _mse_loss(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         # Mean Squared Error: (1/n) * sum((y - y_hat)^2)
-        n_samples = y_true.shape[0]
-        diff = y_pred - y_true
-        return float((diff @ diff) / n_samples)
+        diff = y_true - y_pred
+        return float(np.mean(diff**2))
 
     @staticmethod
     def _mse_gradient(X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
@@ -70,7 +74,7 @@ class LinearRegressionGD:
         y_vec = np.asarray(y, dtype=float).ravel()
 
         if self.weights is None:
-            self._initialize_weights(X_aug.shape[1])
+            self._initialize_weights(X_aug)
 
         for epoch in range(self.epochs):
             y_pred = X_aug @ self.weights
@@ -81,6 +85,14 @@ class LinearRegressionGD:
                 loss = self._mse_loss(y_vec, y_pred)
                 print(f"epoch={epoch:5d} loss={loss:.6f}")
 
+
+        """ STOCHASTIC GRADIENT DESCENT
+        for epoch in range(self.epochs):
+            for i in range(X_aug.shape[0]):  # Loop over each sample
+                y_pred_i = X_aug[i] @ self.weights  # Single sample
+                grad_i = 2.0 * X_aug[i] * (y_pred_i - y_vec[i])  # Single sample gradient
+                self.weights -= self.learning_rate * grad_i  # Update per sample
+        """
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -108,23 +120,22 @@ if __name__ == "__main__":
     noise = rng.normal(scale=0.5, size=n_samples)
     y = true_intercept + X @ true_weights + noise
 
-    model = LinearRegressionGD(learning_rate=0.05, epochs=2000, fit_intercept=True, verbose=False, random_state=0)
+    model = LinearRegressionGD(learning_rate=0.05, epochs=2000, verbose=False, random_state=0)
     model.fit(X, y)
 
-    print("Weights (including intercept if enabled):", model.weights)
+    print("Weights (including intercept):", model.weights)
     print("R^2:", model.score(X, y))
 
 
 # Modified Linear Regression with L1 and L2 Regularization
 class LinearRegressionRegularized:
     def __init__(self, learning_rate: float = 0.01, epochs: int = 1000, 
-                 fit_intercept: bool = True, verbose: bool = False, 
+                 verbose: bool = False, 
                  random_state: int | None = None,
                  alpha_l1: float = 0.0,  # L1 regularization strength
                  alpha_l2: float = 0.0): # L2 regularization strength
         self.learning_rate = learning_rate
         self.epochs = epochs
-        self.fit_intercept = fit_intercept
         self.verbose = verbose
         self.random_state = random_state
         self.alpha_l1 = alpha_l1
@@ -132,8 +143,6 @@ class LinearRegressionRegularized:
         self.weights: np.ndarray | None = None
 
     def _add_intercept(self, X: np.ndarray) -> np.ndarray:
-        if not self.fit_intercept:
-            return X
         ones = np.ones((X.shape[0], 1), dtype=X.dtype)
         return np.concatenate([ones, X], axis=1)
 
@@ -141,84 +150,36 @@ class LinearRegressionRegularized:
         rng = np.random.default_rng(self.random_state)
         self.weights = rng.normal(loc=0.0, scale=0.01, size=(n_features,))
 
-    @staticmethod
-    def _mse_loss(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        # Mean Squared Error: (1/n) * sum((y - y_hat)^2)
+    def _loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        """Combined loss: MSE + L1 + L2 regularization"""
+        # MSE loss
+        mse = np.mean((y_true - y_pred) ** 2)
+        
+        # Regularization terms (skip intercept)
+        if self.weights is None or len(self.weights) <= 1:
+            return mse
+        feature_weights = self.weights[1:]
+        l1_penalty = self.alpha_l1 * np.sum(np.abs(feature_weights))
+        l2_penalty = self.alpha_l2 * np.sum(feature_weights ** 2)
+        
+        return mse + l1_penalty + l2_penalty
+
+    def _gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+        """Combined gradient: MSE + L1 + L2 regularization"""
+        # MSE gradient: (2/n) * X^T(ŷ - y)
         n_samples = y_true.shape[0]
-        diff = y_pred - y_true
-        return float((diff @ diff) / n_samples)
-
-    def _l1_penalty(self) -> float:
-        """Calculate L1 regularization penalty"""
-        if self.weights is None:
-            return 0.0
-        # Don't regularize intercept if fit_intercept is True
-        weights_to_regularize = self.weights[1:] if self.fit_intercept else self.weights
-        return self.alpha_l1 * np.sum(np.abs(weights_to_regularize))
-
-    def _l2_penalty(self) -> float:
-        """Calculate L2 regularization penalty"""
-        if self.weights is None:
-            return 0.0
-        # Don't regularize intercept if fit_intercept is True
-        weights_to_regularize = self.weights[1:] if self.fit_intercept else self.weights
-        return self.alpha_l2 * np.sum(weights_to_regularize ** 2)
-
-    def _regularized_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        """Calculate total loss including regularization"""
-        mse_loss = self._mse_loss(y_true, y_pred)
-        l1_penalty = self._l1_penalty()
-        l2_penalty = self._l2_penalty()
-        return mse_loss + l1_penalty + l2_penalty
-
-    def _mse_gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        """Base MSE gradient: (2/n) * X^T(ŷ - y)"""
-        n_samples = y_true.shape[0]
-        return (2.0 / n_samples) * (X.T @ (y_pred - y_true))
-
-    def _l1_gradient(self) -> np.ndarray:
-        """L1 regularization gradient: α₁ * sign(β)"""
-        if self.weights is None:
-            return np.zeros(0)
+        mse_grad = (2.0 / n_samples) * (X.T @ (y_pred - y_true))
         
-        # Create gradient array same shape as weights
-        l1_grad = np.zeros_like(self.weights)
+        # Regularization gradients (skip intercept)
+        if self.weights is None or len(self.weights) <= 1:
+            return mse_grad
         
-        # Don't regularize intercept if fit_intercept is True
-        if self.fit_intercept and len(self.weights) > 1:
-            # Regularize all weights except intercept (first element)
-            feature_weights = self.weights[1:]
-            l1_grad[1:] = self.alpha_l1 * np.sign(feature_weights)
-        else:
-            # Regularize all weights
-            l1_grad = self.alpha_l1 * np.sign(self.weights)
+        grad = np.zeros_like(self.weights)
+        grad[:] = mse_grad
+        grad[1:] += self.alpha_l1 * np.sign(self.weights[1:])  # L1 gradient
+        grad[1:] += 2.0 * self.alpha_l2 * self.weights[1:]      # L2 gradient
         
-        return l1_grad
-
-    def _l2_gradient(self) -> np.ndarray:
-        """L2 regularization gradient: 2α₂β"""
-        if self.weights is None:
-            return np.zeros(0)
-        
-        # Create gradient array same shape as weights
-        l2_grad = np.zeros_like(self.weights)
-        
-        # Don't regularize intercept if fit_intercept is True
-        if self.fit_intercept and len(self.weights) > 1:
-            # Regularize all weights except intercept (first element)
-            l2_grad[1:] = 2.0 * self.alpha_l2 * self.weights[1:]
-        else:
-            # Regularize all weights
-            l2_grad = 2.0 * self.alpha_l2 * self.weights
-        
-        return l2_grad
-
-    def _regularized_gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        """Combined gradient with L1 and L2 regularization"""
-        mse_grad = self._mse_gradient(X, y_true, y_pred)
-        l1_grad = self._l1_gradient()
-        l2_grad = self._l2_gradient()
-        return mse_grad + l1_grad + l2_grad
+        return grad
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "LinearRegressionRegularized":
         if y.ndim > 1 and y.shape[1] == 1:
@@ -232,15 +193,12 @@ class LinearRegressionRegularized:
 
         for epoch in range(self.epochs):
             y_pred = X_aug @ self.weights
-            grad = self._regularized_gradient(X_aug, y_vec, y_pred)
+            grad = self._gradient(X_aug, y_vec, y_pred)
             self.weights -= self.learning_rate * grad
 
             if self.verbose and (epoch % max(1, self.epochs // 10) == 0 or epoch == self.epochs - 1):
-                loss = self._regularized_loss(y_vec, y_pred)
-                mse_loss = self._mse_loss(y_vec, y_pred)
-                l1_penalty = self._l1_penalty()
-                l2_penalty = self._l2_penalty()
-                print(f"epoch={epoch:5d} total_loss={loss:.6f} mse={mse_loss:.6f} l1={l1_penalty:.6f} l2={l2_penalty:.6f}")
+                loss = self._loss(y_vec, y_pred)
+                print(f"epoch={epoch:5d} loss={loss:.6f}")
 
         return self
 

@@ -30,31 +30,8 @@ cluster2 = np.random.normal([6, 6], 0.5, (30, 2))
 cluster3 = np.random.normal([2, 6], 0.5, (30, 2))
 X = np.vstack([cluster1, cluster2, cluster3])
 
-class KMeans:
-    """
-    K-Means Clustering Class with fit() and predict() methods
-    Following scikit-learn style interface
-    """
-    
+class KMeans: 
     def __init__(self, n_clusters=3, max_iter=100, tol=1e-4, distance='euclidean', random_state=None, verbose=False):
-        """
-        Initialize K-Means Clustering
-        
-        Parameters:
-        -----------
-        n_clusters : int, default=3
-            Number of clusters to form
-        max_iter : int, default=100
-            Maximum number of iterations
-        tol : float, default=1e-4
-            Tolerance for convergence
-        distance : str, default='euclidean'
-            Distance metric to use ('euclidean', 'manhattan')
-        random_state : int, default=None
-            Random seed for reproducibility
-        verbose : bool, default=False
-            Whether to print training information
-        """
         self.n_clusters = n_clusters
         self.max_iter = max_iter
         self.tol = tol
@@ -66,29 +43,24 @@ class KMeans:
         self.centroids_ = None
         self.labels_ = None
         self.inertia_ = None
+        self.silhouette_score_ = None
         self.n_iter_ = None
         
         if random_state is not None:
             np.random.seed(random_state)
     
     @staticmethod
-    def euclidean_distance(point1: np.ndarray, point2: np.ndarray) -> float:
-        """Compute Euclidean distance between two points"""
+    def euclidean_distance(point1, point2) -> float:
         diff = point1 - point2
         return float(np.sqrt(np.sum(diff ** 2)))
 
     @staticmethod
-    def manhattan_distance(point1: np.ndarray, point2: np.ndarray) -> float:
-        """Compute Manhattan distance between two points"""
+    def manhattan_distance(point1, point2) -> float:
         diff = point1 - point2
         return float(np.sum(np.abs(diff)))
 
-    @staticmethod
-    def euclidean_distance_norm(v1, v2):
-        return np.linalg.norm(v1 - v2)
 
-    def _compute_distance(self, point1: np.ndarray, point2: np.ndarray) -> float:
-        """Compute distance between two points using specified metric"""
+    def _compute_distance(self, point1, point2) -> float:
         if self.distance == 'euclidean':
             return self.euclidean_distance(point1, point2)
         elif self.distance == 'manhattan':
@@ -105,22 +77,31 @@ class KMeans:
 
     @staticmethod
     def compute_silhouette_score(X, labels):
+        """Compute silhouette score for clustering quality"""
         n = len(X)
         unique_labels = np.unique(labels)
+        
+        if len(unique_labels) == 1:
+            # All points in one cluster
+            return 0.0
+        
         silhouette_scores = []
 
         for i in range(n):
             same_cluster = X[labels == labels[i]]
             other_clusters = [X[labels == l] for l in unique_labels if l != labels[i]]
+            
             # a(i): average distance to points in same cluster
-            a = np.mean([np.linalg.norm(X[i] - x) for x in same_cluster if not np.array_equal(x, X[i])] or [0])
+            same_cluster_points = same_cluster[~np.all(same_cluster == X[i], axis=1)]
+            a = np.mean([np.linalg.norm(X[i] - x) for x in same_cluster_points]) if len(same_cluster_points) > 0 else 0
 
             # b(i): min average distance to points in other clusters
-            b = np.min([np.mean([np.linalg.norm(X[i] - x) for x in cluster]) for cluster in other_clusters])
+            b = np.min([np.mean([np.linalg.norm(X[i] - x) for x in cluster]) for cluster in other_clusters]) if len(other_clusters) > 0 else 0
 
-            silhouette_scores.append((b - a) / max(a, b))
+            silhouette_score = (b - a) / max(a, b) if max(a, b) > 0 else 0
+            silhouette_scores.append(silhouette_score)
         
-        return np.mean(silhouette_scores)
+        return float(np.mean(silhouette_scores))
 
     def initialize_centroids(self, X, k):
         n_samples = X.shape[0]
@@ -146,9 +127,7 @@ class KMeans:
         return labels
 
     def update_centroids(self, X, labels, k, centroids=None):
-        """ Move centroids to the center (mean) of their assigned points """
-        print("   Updating centroids to center of their clusters...")
-        
+
         n_features = X.shape[1]
         new_centroids = np.zeros((k, n_features))
         for cluster_id in range(k):
@@ -168,27 +147,17 @@ class KMeans:
     def fit(self, X):
 
         X = np.array(X)
-        n_samples, n_features = X.shape
-        
-        if self.verbose:
-            print(f"Training K-means with {self.n_clusters} clusters on {n_samples} samples...")
         
         self.centroids_ = self.initialize_centroids(X, self.n_clusters)
-        
-        # Training loop
         for iteration in range(self.max_iter):
             old_centroids = self.centroids_.copy()
             
-            # Assign clusters
             self.labels_ = self.assign_clusters(X, self.centroids_)
-            # Update centroids
             self.centroids_ = self.update_centroids(X, self.labels_, self.n_clusters, self.centroids_)
-            # Calculate inertia
             self.inertia_ = self.calculate_inertia(X, self.centroids_, self.labels_)
             
-            if self.verbose:
-                print(f"   Inertia after iteration {iteration + 1}: {self.inertia_:.2f}")
-            
+            self.silhouette_score_ = self.compute_silhouette_score(X, self.labels_)
+
             # Check convergence
             moved = False
             for i in range(self.n_clusters):
@@ -198,8 +167,6 @@ class KMeans:
                     break
             
             if not moved:
-                if self.verbose:
-                    print(f"\n   🎉 Algorithm converged after {iteration + 1} iterations!")
                 self.n_iter_ = iteration + 1
                 break
         else:
@@ -304,5 +271,8 @@ print(f"   - Predicted clusters: {new_predictions}")
 # Calculate model score
 print(f"\n7. Model evaluation:")
 score = kmeans_model.score(X)
+silhouette = kmeans_model.silhouette_score_
 print(f"   - Model score (negative inertia): {score:.2f}")
+print(f"   - Silhouette score: {silhouette:.4f}")
+print(f"   - Inertia: {kmeans_model.inertia_:.2f}")
 

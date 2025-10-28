@@ -26,37 +26,11 @@ from sklearn.datasets import make_regression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-# Generate sample data for demonstration
-np.random.seed(42)
-
-# Create regression dataset
-X_reg, y_reg = make_regression(n_samples=200, n_features=2, noise=10, random_state=42)
-
-# Split the data
-X_train, X_test, y_train, y_test = train_test_split(X_reg, y_reg, test_size=0.3, random_state=42)
-
 
 class KNNRegressor:
-    """
-    K-Nearest Neighbors Regressor with comprehensive functionality
-    Following scikit-learn style interface for interview preparation
-    """
-    
+
     def __init__(self, k=3, distance_metric='euclidean', weights='uniform', verbose=False):
-        """
-        Initialize KNN regressor
-        
-        Parameters:
-        -----------
-        k : int, default=3
-            Number of nearest neighbors to consider
-        distance_metric : str, default='euclidean'
-            Distance metric to use ('euclidean', 'manhattan', 'minkowski')
-        weights : str, default='uniform'
-            Weight function used in prediction ('uniform', 'distance')
-        verbose : bool, default=False
-            Whether to print training information
-        """
+
         self.k = k
         self.distance_metric = distance_metric
         self.weights = weights
@@ -67,8 +41,6 @@ class KNNRegressor:
         self.y_train_ = None
         self.is_fitted_ = False
         
-        if self.verbose:
-            print(f"Initialized KNN Regressor with k={k}, distance_metric='{distance_metric}', weights='{weights}'")
     
     @staticmethod
     def euclidean_distance(point1: np.ndarray, point2: np.ndarray) -> float:
@@ -88,16 +60,6 @@ class KNNRegressor:
         diff = point1 - point2
         return float(np.sum(np.abs(diff) ** p) ** (1/p))
 
-    @staticmethod
-    def euclidean_distance_vectorized(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized Euclidean distance computation"""
-        return np.linalg.norm(X1 - X2, axis=1)
-
-    @staticmethod
-    def manhattan_distance_vectorized(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized Manhattan distance computation"""
-        return np.sum(np.abs(X1 - X2), axis=1)
-
     def _compute_distance(self, point1: np.ndarray, point2: np.ndarray) -> float:
         """Compute distance between two points using specified metric"""
         if self.distance_metric == 'euclidean':
@@ -109,85 +71,40 @@ class KNNRegressor:
         else:
             raise ValueError(f"Unknown distance metric: {self.distance_metric}")
 
-    def _compute_distances_vectorized(self, X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized distance computation"""
-        if self.distance_metric == 'euclidean':
-            return self.euclidean_distance_vectorized(X1, X2)
-        elif self.distance_metric == 'manhattan':
-            return self.manhattan_distance_vectorized(X1, X2)
-        else:
-            raise ValueError(f"Vectorized computation not implemented for: {self.distance_metric}")
+
 
     def fit(self, X, y):
-        """
-        Fit the KNN regressor to training data
-        
-        Parameters:
-        -----------
-        X : array-like of shape (n_samples, n_features)
-            Training samples
-        y : array-like of shape (n_samples,)
-            Target values (continuous)
-        
-        Returns:
-        --------
-        self : object
-            Returns the instance itself
-        """
+
         X = np.array(X)
         y = np.array(y)
-        
-        if self.verbose:
-            print(f"Training KNN Regressor with {len(X)} samples, {X.shape[1]} features...")
-            print(f"Target range: [{np.min(y):.2f}, {np.max(y):.2f}]")
         
         # Store training data
         self.X_train_ = X.copy()
         self.y_train_ = y.copy()
         self.is_fitted_ = True
-        
-        if self.verbose:
-            print("Training completed! Model is ready for predictions.")
+
         
         return self
 
     def predict(self, X):
-        """
-        Predict target values for test samples
-        
-        Parameters:
-        -----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples
-        
-        Returns:
-        --------
-        predictions : array of shape (n_samples,)
-            Predicted target values
-        """
-        if not self.is_fitted_:
-            raise ValueError("Model must be fitted before making predictions. Call fit() first.")
         
         X = np.array(X)
         predictions = []
         
-        if self.verbose:
-            print(f"Making predictions for {len(X)} test samples...")
-        
         for test_point in X:
             # Compute distances to all training points
-            distances = []
+            distances = {}
             for i, train_point in enumerate(self.X_train_):
                 dist = self._compute_distance(test_point, train_point)
-                distances.append((dist, self.y_train_[i]))
+                distances[i] = dist
             
             # Sort by distance and get k nearest neighbors
-            distances.sort(key=lambda x: x[0])
-            k_neighbors = distances[:self.k]
+            sorted_dict = dict(sorted(distances.items(), key=lambda item: item[1]))
+            neighbor_indices = list(sorted_dict.keys())[:self.k]
             
             # Extract target values and distances
-            neighbor_targets = [target for _, target in k_neighbors]
-            neighbor_distances = [dist for dist, _ in k_neighbors]
+            neighbor_targets = self.y_train_[neighbor_indices]
+            neighbor_distances = list(sorted_dict.values())[:self.k]
             
             # Make prediction based on weights
             if self.weights == 'uniform':
@@ -216,39 +133,11 @@ class KNNRegressor:
         return np.array(predictions)
 
     def fit_predict(self, X, y):
-        """
-        Fit the model and predict on the same data
-        
-        Parameters:
-        -----------
-        X : array-like of shape (n_samples, n_features)
-            Training samples
-        y : array-like of shape (n_samples,)
-            Target values
-        
-        Returns:
-        --------
-        predictions : array of shape (n_samples,)
-            Predicted target values
-        """
+
         return self.fit(X, y).predict(X)
 
     def score(self, X, y):
-        """
-        Return the R² score on the given test data and labels
-        
-        Parameters:
-        -----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples
-        y : array-like of shape (n_samples,)
-            True target values
-        
-        Returns:
-        --------
-        score : float
-            R² score (coefficient of determination)
-        """
+
         predictions = self.predict(X)
         return r2_score(y, predictions)
 

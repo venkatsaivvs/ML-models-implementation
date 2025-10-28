@@ -1,4 +1,4 @@
-from src.ML_code.decision_tree_regressor import DecisionTreeRegressor
+from src.ml_code.decision_tree_regressor import DecisionTreeRegressor
 import numpy as np
 import pytest
 
@@ -258,22 +258,22 @@ def test_regression_accuracy():
     r2 = dt.score(X, y)
     assert r2 >= 0  # Should be non-negative
 
-def test_variance_reduction():
-    """Test variance reduction calculation"""
+def test_information_gain():
+    """Test information gain calculation"""
     # Test with clear separation
     y_parent = np.array([1, 1, 1, 10, 10, 10])
     y_left = np.array([1, 1, 1])
     y_right = np.array([10, 10, 10])
     
     dt = DecisionTreeRegressor()
-    variance_reduction = dt._variance_reduction(y_parent, y_left, y_right)
+    information_gain = dt._information_gain(y_parent, y_left, y_right)
     
-    # Should have positive variance reduction
-    assert variance_reduction > 0
+    # Should have positive information gain
+    assert information_gain > 0
     
     # Test with no separation
     y_no_split = np.array([5, 5, 5, 5, 5, 5])
-    variance_reduction_no = dt._variance_reduction(y_no_split, y_no_split, y_no_split)
+    information_gain_no = dt._information_gain(y_no_split, y_no_split, y_no_split)
     
-    # Should have zero variance reduction
-    assert variance_reduction_no == 0.0
+    # Should have zero information gain
+    assert information_gain_no == 0.0

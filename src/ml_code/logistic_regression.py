@@ -3,6 +3,12 @@ import numpy as np
 """
 Logistic Regression Mathematical Formulation:
 
+add intercept
+loss - corss entropy oss 
+gradient
+
+fit - iterate over epochs, predict, gradient, weights, loss
+
 1. Prediction: ŷ = σ(Xβ) = 1/(1 + e^(-Xβ))
    where σ is the sigmoid function, X is the feature matrix (n × p), β is the weight vector (p × 1)
 

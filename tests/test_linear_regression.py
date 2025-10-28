@@ -14,6 +14,10 @@ def test_linear_regression_gd():
     assert lr.predict(X) is not None
     assert lr.score(X, y) is not None
     assert lr.predict(X) is not None
+    # Test that weights are properly initialized
+    assert lr.weights is not None
+    assert len(lr.weights) == 3  # 2 features + 1 intercept
+    print(f"Weights: {lr.weights}")  # This will show with -s flag
 
 #write additional tests for the linear regression model - I am following a test driven development approach
 

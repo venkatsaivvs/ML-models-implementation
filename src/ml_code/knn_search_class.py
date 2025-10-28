@@ -20,47 +20,18 @@ list all functions and classes in the file
 =========================================
 """
 import numpy as np
-import matplotlib.pyplot as plt
 from collections import Counter
-from sklearn.datasets import make_classification, make_blobs
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score
+
 
 # Generate sample data for demonstration
 np.random.seed(42)
 
-# Create classification dataset
-X_class, y_class = make_classification(n_samples=200, n_features=2, n_redundant=0, 
-                                     n_informative=2, n_clusters_per_class=1, random_state=42)
-
-# Create blob dataset for visualization
-X_blobs, y_blobs = make_blobs(n_samples=150, centers=3, n_features=2, random_state=42)
-
-# Split the data
-X_train, X_test, y_train, y_test = train_test_split(X_class, y_class, test_size=0.3, random_state=42)
-
 
 class KNN:
-    """
-    K-Nearest Neighbors Classifier with comprehensive functionality
-    Following scikit-learn style interface for interview preparation
-    """
     
     def __init__(self, k=3, distance_metric='euclidean', weights='uniform', verbose=False):
-        """
-        Initialize KNN classifier
-        
-        Parameters:
-        -----------
-        k : int, default=3
-            Number of nearest neighbors to consider
-        distance_metric : str, default='euclidean'
-            Distance metric to use ('euclidean', 'manhattan', 'minkowski')
-        weights : str, default='uniform'
-            Weight function used in prediction ('uniform', 'distance')
-        verbose : bool, default=False
-            Whether to print training information
-        """
+
         self.k = k
         self.distance_metric = distance_metric
         self.weights = weights
@@ -92,15 +63,6 @@ class KNN:
         diff = point1 - point2
         return float(np.sum(np.abs(diff) ** p) ** (1/p))
 
-    @staticmethod
-    def euclidean_distance_vectorized(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized Euclidean distance computation"""
-        return np.linalg.norm(X1 - X2, axis=1)
-
-    @staticmethod
-    def manhattan_distance_vectorized(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized Manhattan distance computation"""
-        return np.sum(np.abs(X1 - X2), axis=1)
 
     def _compute_distance(self, point1: np.ndarray, point2: np.ndarray) -> float:
         """Compute distance between two points using specified metric"""
@@ -113,23 +75,10 @@ class KNN:
         else:
             raise ValueError(f"Unknown distance metric: {self.distance_metric}")
 
-    def _compute_distances_vectorized(self, X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        """Vectorized distance computation"""
-        if self.distance_metric == 'euclidean':
-            return self.euclidean_distance_vectorized(X1, X2)
-        elif self.distance_metric == 'manhattan':
-            return self.manhattan_distance_vectorized(X1, X2)
-        else:
-            raise ValueError(f"Vectorized computation not implemented for: {self.distance_metric}")
-
     def fit(self, X, y):
 
         X = np.array(X)
         y = np.array(y)
-        
-        if self.verbose:
-            print(f"Training KNN with {len(X)} samples, {X.shape[1]} features...")
-            print(f"Number of unique classes: {len(np.unique(y))}")
         
         # Store training data
         self.X_train_ = X.copy()
@@ -149,9 +98,6 @@ class KNN:
         X = np.array(X)
         predictions = []
         
-        if self.verbose:
-            print(f"Making predictions for {len(X)} test samples...")
-        
         for test_point in X:
             # Compute distances to all training points
             distances = {}
@@ -163,10 +109,10 @@ class KNN:
             # Sort by distance and get k nearest neighbors
             sorted_dict = dict(sorted(distances.items(), key=lambda item: item[1]))
             neighbor_indices = list(sorted_dict.keys())[:self.k]
-            
+
             # Extract labels and distances
-            neighbor_labels = [self.y_train_[idx] for idx in neighbor_indices]
-            neighbor_distances = [sorted_dict[idx] for idx in neighbor_indices]
+            neighbor_labels = self.y_train_[neighbor_indices]
+            neighbor_distances = list(sorted_dict.values())[:self.k]
             
             # Make prediction based on weights
             if self.weights == 'uniform':
@@ -222,7 +168,7 @@ class KNN:
             neighbor_indices = list(sorted_dict.keys())[:self.k]
             
             # Extract labels and distances
-            neighbor_labels = [self.y_train_[idx] for idx in neighbor_indices]
+            neighbor_labels = self.y_train_[neighbor_indices]
             neighbor_distances = [sorted_dict[idx] for idx in neighbor_indices]
             
             # Compute probabilities based on weights

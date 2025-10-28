@@ -46,24 +46,6 @@ class DecisionTree:
     
     def __init__(self, max_depth=None, min_samples_split=2, min_samples_leaf=1, 
                  criterion='gini', random_state=None, verbose=False):
-        """
-        Initialize Decision Tree Classifier
-        
-        Parameters:
-        -----------
-        max_depth : int, default=None
-            Maximum depth of the tree
-        min_samples_split : int, default=2
-            Minimum number of samples required to split an internal node
-        min_samples_leaf : int, default=1
-            Minimum number of samples required to be at a leaf node
-        criterion : str, default='gini'
-            Function to measure the quality of a split ('gini', 'entropy')
-        random_state : int, default=None
-            Random seed for reproducibility
-        verbose : bool, default=False
-            Whether to print training information
-        """
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
@@ -161,9 +143,9 @@ class DecisionTree:
             
             for threshold in thresholds:
                 # Split data
-                left_mask = values <= threshold
-                left_y = y[left_mask]
-                right_y = y[~left_mask]
+                left_temp = values <= threshold
+                left_y = y[left_temp]
+                right_y = y[~left_temp]
                 
                 # Skip if split is too small
                 if len(left_y) < self.min_samples_leaf or len(right_y) < self.min_samples_leaf:
@@ -203,9 +185,9 @@ class DecisionTree:
             return self._create_leaf(y)
         
         # Split data
-        left_mask = X[:, best_feature] <= best_threshold
-        X_left, y_left = X[left_mask], y[left_mask]
-        X_right, y_right = X[~left_mask], y[~left_mask]
+        left_temp = X[:, best_feature] <= best_threshold
+        X_left, y_left = X[left_temp], y[left_temp]
+        X_right, y_right = X[~left_temp], y[~left_temp]
         
         # Build subtrees
         return {
@@ -358,29 +340,7 @@ class DecisionTree:
         predictions = self.predict(X)
         return np.mean(predictions == y)
     
-    def get_depth(self):
-        """Get the depth of the tree"""
-        if not self.is_fitted_:
-            raise ValueError("Model must be fitted before getting depth.")
-        
-        def _get_depth(node):
-            if node["type"] == "leaf":
-                return 0
-            return 1 + max(_get_depth(node["left"]), _get_depth(node["right"]))
-        
-        return _get_depth(self.tree_)
-    
-    def get_n_leaves(self):
-        """Get the number of leaves in the tree"""
-        if not self.is_fitted_:
-            raise ValueError("Model must be fitted before getting number of leaves.")
-        
-        def _count_leaves(node):
-            if node["type"] == "leaf":
-                return 1
-            return _count_leaves(node["left"]) + _count_leaves(node["right"])
-        
-        return _count_leaves(self.tree_)
+
     
     def print_tree(self, node=None, depth=0, feature_names=None):
         """Print the tree structure"""
