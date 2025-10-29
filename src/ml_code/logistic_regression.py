@@ -49,8 +49,8 @@ class LogisticRegressionGD:
         return np.concatenate([ones, X], axis=1)
 
     def _initialize_weights(self, n_features: int) -> None:
-        rng = np.random.default_rng(self.random_state)
-        self.weights = rng.normal(loc=0.0, scale=0.01, size=(n_features,))
+        np.random.seed(self.random_state)
+        self.weights = np.random.normal(loc=0.0, scale=0.01, size=(n_features,))
 
     @staticmethod
     def _sigmoid(z: np.ndarray) -> np.ndarray:
@@ -66,7 +66,6 @@ class LogisticRegressionGD:
         epsilon = 1e-15
         y_pred_clipped = np.clip(y_pred, epsilon, 1 - epsilon)
         
-        n_samples = y_true.shape[0]
         loss = -(y_true * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped))
         return float(np.mean(loss))
 
@@ -128,18 +127,17 @@ class LogisticRegressionGD:
 
 
 if __name__ == "__main__":
-    rng = np.random.default_rng(42)
+    #modify to random.normal and
+    np.random.seed(42)
     n_samples = 300
-    
+    X = np.random.normal(size=(n_samples, 2))
     # Generate synthetic binary classification data
-    X = rng.normal(size=(n_samples, 2))
     true_intercept = 0.5
     true_weights = np.array([2.0, -1.5])
-    
-    # Create linear decision boundary with noise
-    z_true = true_intercept + X @ true_weights
+    noise = np.random.normal(scale=0.5, size=n_samples)
+    z_true = true_intercept + X @ true_weights + noise
     p_true = 1.0 / (1.0 + np.exp(-z_true))  # True probabilities
-    y = (rng.random(n_samples) < p_true).astype(int)  # Binary labels
+    y = (np.random.random(n_samples) < p_true).astype(int)  # Binary labels
     
     model = LogisticRegressionGD(learning_rate=0.1, epochs=1000, fit_intercept=True, verbose=False, random_state=0)
     model.fit(X, y)
@@ -149,7 +147,7 @@ if __name__ == "__main__":
     
     # Show some predictions
     print("\nSample predictions:")
-    sample_indices = rng.choice(n_samples, 5, replace=False)
+    sample_indices = np.random.choice(n_samples, 5, replace=False)
     for idx in sample_indices:
         prob = model.predict_proba(X[idx:idx+1])[0]
         pred = model.predict(X[idx:idx+1])[0]
@@ -161,26 +159,181 @@ if __name__ == "__main__":
 #3. Multinomial Logistic Regression (Softmax)
 
 # Instead of single weight vector
-self.weights: np.ndarray  # shape: (n_features,)
+# self.weights: np.ndarray  # shape: (n_features,)
 
 # We'd have weight matrix
-self.weights: np.ndarray  # shape: (n_features, n_classes)
+# self.weights: np.ndarray  # shape: (n_features, n_classes)
 
 # Instead of sigmoid
-def _softmax(self, z: np.ndarray) -> np.ndarray:
-    exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))  # Numerical stability
-    return exp_z / np.sum(exp_z, axis=1, keepdims=True)
+# def _softmax(self, z: np.ndarray) -> np.ndarray:
+#     exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))  # Numerical stability
+#     return exp_z / np.sum(exp_z, axis=1, keepdims=True)
 
 # Instead of binary cross-entropy
-def _multinomial_cross_entropy_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    # y_true: (n_samples, n_classes) - one-hot encoded
-    # y_pred: (n_samples, n_classes) - softmax probabilities
-    epsilon = 1e-15
-    y_pred_clipped = np.clip(y_pred, epsilon, 1 - epsilon)
-    loss = -np.sum(y_true * np.log(y_pred_clipped))
-    return float(loss / y_true.shape[0])
+# def _multinomial_cross_entropy_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
+#     # y_true: (n_samples, n_classes) - one-hot encoded
+#     # y_pred: (n_samples, n_classes) - softmax probabilities
+#     epsilon = 1e-15
+#     y_pred_clipped = np.clip(y_pred, epsilon, 1 - epsilon)
+#     loss = -np.sum(y_true * np.log(y_pred_clipped))
+#     return float(loss / y_true.shape[0])
 
 # Gradient becomes
-def _multinomial_gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-    # ∇J(β) = (1/n) * X^T(ŷ - y)
-    return (1.0 / X.shape[0]) * (X.T @ (y_pred - y_true))
+# def _multinomial_gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+#     # ∇J(β) = (1/n) * X^T(ŷ - y)
+#     return (1.0 / X.shape[0]) * (X.T @ (y_pred - y_true))
+
+
+# Modified Logistic Regression with L1 and L2 Regularization
+class LogisticRegressionRegularized:
+    def __init__(self, learning_rate: float = 0.01, epochs: int = 1000, 
+                 fit_intercept: bool = True, verbose: bool = False, 
+                 random_state: int | None = None,
+                 alpha_l1: float = 0.0,  # L1 regularization strength
+                 alpha_l2: float = 0.0): # L2 regularization strength
+        self.learning_rate = learning_rate
+        self.epochs = epochs
+        self.fit_intercept = fit_intercept
+        self.verbose = verbose
+        self.random_state = random_state
+        self.alpha_l1 = alpha_l1
+        self.alpha_l2 = alpha_l2
+        self.weights: np.ndarray | None = None
+
+    def _add_intercept(self, X: np.ndarray) -> np.ndarray:
+        if not self.fit_intercept:
+            return X
+        ones = np.ones((X.shape[0], 1), dtype=X.dtype)
+        return np.concatenate([ones, X], axis=1)
+
+    def _initialize_weights(self, n_features: int) -> None:
+        np.random.seed(self.random_state)
+        self.weights = np.random.normal(loc=0.0, scale=0.01, size=(n_features,))
+
+    @staticmethod
+    def _sigmoid(z: np.ndarray) -> np.ndarray:
+        # Sigmoid function: σ(z) = 1/(1 + e^(-z))
+        # Clip z to prevent overflow
+        z_clipped = np.clip(z, -500, 500)
+        return 1.0 / (1.0 + np.exp(-z_clipped))
+
+    def _loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        """Combined loss: Cross-entropy + L1 + L2 regularization"""
+        # Cross-entropy loss
+        epsilon = 1e-15
+        y_pred_clipped = np.clip(y_pred, epsilon, 1 - epsilon)
+        cross_entropy = -(y_true * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped))
+        ce_loss = np.mean(cross_entropy)
+        
+        # Regularization terms (skip intercept)
+        if self.weights is None or len(self.weights) <= 1:
+            return float(ce_loss)
+        feature_weights = self.weights[1:] if self.fit_intercept else self.weights
+        l1_penalty = self.alpha_l1 * np.sum(np.abs(feature_weights))
+        l2_penalty = self.alpha_l2 * np.sum(feature_weights ** 2)
+        
+        return float(ce_loss + l1_penalty + l2_penalty)
+
+    def _gradient(self, X: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+        """Combined gradient: Cross-entropy + L1 + L2 regularization"""
+        # Cross-entropy gradient: (1/n) * X^T(ŷ - y)
+        n_samples = y_true.shape[0]
+        ce_grad = (1.0 / n_samples) * (X.T @ (y_pred - y_true))
+        
+        # Regularization gradients (skip intercept)
+        if self.weights is None or len(self.weights) <= 1:
+            return ce_grad
+        
+        grad = np.zeros_like(self.weights)
+        grad[:] = ce_grad
+        
+        if self.fit_intercept:
+            grad[1:] += self.alpha_l1 * np.sign(self.weights[1:])  # L1 gradient
+            grad[1:] += 2.0 * self.alpha_l2 * self.weights[1:]      # L2 gradient
+        else:
+            grad += self.alpha_l1 * np.sign(self.weights)  # L1 gradient
+            grad += 2.0 * self.alpha_l2 * self.weights      # L2 gradient
+        
+        return grad
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "LogisticRegressionRegularized":
+        if y.ndim > 1 and y.shape[1] == 1:
+            y = y.ravel()
+
+        X_aug = self._add_intercept(np.asarray(X, dtype=float))
+        y_vec = np.asarray(y, dtype=float).ravel()
+        
+        # Ensure binary labels
+        unique_labels = np.unique(y_vec)
+        if len(unique_labels) != 2:
+            raise ValueError("Logistic regression requires exactly 2 classes")
+        if not np.all(np.isin(unique_labels, [0, 1])):
+            raise ValueError("Labels must be 0 and 1 for binary classification")
+
+        if self.weights is None:
+            self._initialize_weights(X_aug.shape[1])
+
+        for epoch in range(self.epochs):
+            # Forward pass: compute predictions
+            z = X_aug @ self.weights
+            y_pred = self._sigmoid(z)
+            
+            # Backward pass: compute gradient and update weights
+            grad = self._gradient(X_aug, y_vec, y_pred)
+            self.weights -= self.learning_rate * grad
+
+            if self.verbose and (epoch % max(1, self.epochs // 10) == 0 or epoch == self.epochs - 1):
+                loss = self._loss(y_vec, y_pred)
+                print(f"epoch={epoch:5d} loss={loss:.6f}")
+
+        return self
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if self.weights is None:
+            raise RuntimeError("Model is not fitted yet. Call fit(X, y) first.")
+        X_aug = self._add_intercept(np.asarray(X, dtype=float))
+        z = X_aug @ self.weights
+        return self._sigmoid(z)
+
+    def predict(self, X: np.ndarray, threshold: float = 0.5) -> np.ndarray:
+        """Predict binary labels using threshold"""
+        probabilities = self.predict_proba(X)
+        return (probabilities >= threshold).astype(int)
+
+    def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        # Accuracy score
+        y = np.asarray(y, dtype=float).ravel()
+        y_pred = self.predict(X)
+        return float(np.mean(y_pred == y))
+
+
+# Example usage with regularization
+if __name__ == "__main__":
+    print("\n" + "="*50)
+    print("Testing Regularized Logistic Regression")
+    print("="*50)
+    
+    np.random.seed(42)
+    n_samples = 300
+    X = np.random.normal(size=(n_samples, 2))
+    # Generate synthetic binary classification data
+    true_intercept = 0.5
+    true_weights = np.array([2.0, -1.5])
+    noise = np.random.normal(scale=0.5, size=n_samples)
+    z_true = true_intercept + X @ true_weights + noise
+    p_true = 1.0 / (1.0 + np.exp(-z_true))  # True probabilities
+    y = (np.random.random(n_samples) < p_true).astype(int)  # Binary labels
+
+    # Test different regularization approaches
+    models = {
+        "No Regularization": LogisticRegressionRegularized(alpha_l1=0.0, alpha_l2=0.0, learning_rate=0.1, epochs=1000, fit_intercept=True, verbose=False, random_state=0),
+        "L2 Regularization (Ridge)": LogisticRegressionRegularized(alpha_l1=0.0, alpha_l2=0.1, learning_rate=0.1, epochs=1000, fit_intercept=True, verbose=False, random_state=0),
+        "L1 Regularization (Lasso)": LogisticRegressionRegularized(alpha_l1=0.01, alpha_l2=0.0, learning_rate=0.1, epochs=1000, fit_intercept=True, verbose=False, random_state=0),
+        "Elastic Net": LogisticRegressionRegularized(alpha_l1=0.005, alpha_l2=0.05, learning_rate=0.1, epochs=1000, fit_intercept=True, verbose=False, random_state=0)
+    }
+
+    for name, model in models.items():
+        print(f"\n{name}:")
+        model.fit(X, y)
+        print(f"  Weights: {model.weights}")
+        print(f"  Accuracy: {model.score(X, y):.6f}") 

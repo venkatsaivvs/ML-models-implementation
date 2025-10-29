@@ -1,8 +1,6 @@
 """
-Simplified TF-IDF Implementation for Interview Preparation
-Focus on core concepts without complex features like n-grams
 tf - formula: count of term in document / total number of terms in document
-idf - formula: log(total_documents / documents_containing_term)
+idf - formula: np.log(total_documents / documents_containing_term)
 
 list all functions and classes in the file
 1. simple_tokenizer - tokenize text without regex patterns

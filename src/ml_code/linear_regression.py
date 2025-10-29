@@ -2,6 +2,7 @@ import numpy as np
 
 """
 add intercept
+initialize weights  - so random state
 loss
 gradient
 
@@ -78,7 +79,7 @@ class LinearRegressionGD:
             grad = self._mse_gradient(X_aug, y_vec, y_pred)
             self.weights -= self.learning_rate * grad
 
-            if self.verbose and (epoch % max(1, self.epochs // 10) == 0 or epoch == self.epochs - 1):
+            if self.verbose and epoch % 10 == 0:
                 loss = self._mse_loss(y_vec, y_pred)
                 print(f"epoch={epoch:5d} loss={loss:.6f}")
 
@@ -109,13 +110,14 @@ class LinearRegressionGD:
 
 
 if __name__ == "__main__":
-    rng = np.random.default_rng(42)
+    np.random.seed(42)  # instead of default_rng for reproducibility
     n_samples = 300
-    X = rng.normal(size=(n_samples, 2))
+    X = np.random.normal(size=(n_samples, 2))  # same as rng.normal
     true_intercept = 1.5
     true_weights = np.array([2.0, -3.0])
-    noise = rng.normal(scale=0.5, size=n_samples)
+    noise = np.random.normal(scale=0.5, size=n_samples)
     y = true_intercept + X @ true_weights + noise
+
 
     model = LinearRegressionGD(learning_rate=0.05, epochs=2000, verbose=False, random_state=0)
     model.fit(X, y)
@@ -193,7 +195,7 @@ class LinearRegressionRegularized:
             grad = self._gradient(X_aug, y_vec, y_pred)
             self.weights -= self.learning_rate * grad
 
-            if self.verbose and (epoch % max(1, self.epochs // 10) == 0 or epoch == self.epochs - 1):
+            if epoch % 10 == 0 or epoch == self.epochs - 1:
                 loss = self._loss(y_vec, y_pred)
                 print(f"epoch={epoch:5d} loss={loss:.6f}")
 
@@ -221,12 +223,12 @@ if __name__ == "__main__":
     print("Testing Regularized Linear Regression")
     print("="*50)
     
-    rng = np.random.default_rng(42)
+    np.random.seed(42)
     n_samples = 300
-    X = rng.normal(size=(n_samples, 2))
+    X = np.random.normal(size=(n_samples, 2))
     true_intercept = 1.5
     true_weights = np.array([2.0, -3.0])
-    noise = rng.normal(scale=0.5, size=n_samples)
+    noise = np.random.normal(scale=0.5, size=n_samples)
     y = true_intercept + X @ true_weights + noise
 
     # Test different regularization approaches

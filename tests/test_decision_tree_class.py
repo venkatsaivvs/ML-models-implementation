@@ -15,6 +15,25 @@ def test_decision_tree():
     assert dt.classes_ is not None
     assert dt.is_fitted_ == True
 
+
+
+def test_unfitted_model_errors():
+    """Test that unfitted model raises appropriate errors"""
+    dt = DecisionTree()
+    X = np.array([[1, 1], [2, 2]])
+    y = np.array([0, 1])
+    
+    # All methods should raise errors before fitting
+    with pytest.raises(ValueError, match="Model must be fitted"):
+        dt.predict(X)
+    
+    with pytest.raises(ValueError, match="Model must be fitted"):
+        dt.predict_proba(X)
+    
+    with pytest.raises(ValueError, match="Model must be fitted"):
+        dt.score(X, y)
+
+
 def test_impurity_functions():
     """Test impurity calculation functions"""
     # Test with pure labels (should have 0 impurity)
@@ -33,22 +52,6 @@ def test_impurity_functions():
     # Test with empty array
     assert DecisionTree.compute_gini(np.array([])) == 0.0
     assert DecisionTree.compute_entropy(np.array([])) == 0.0
-
-def test_unfitted_model_errors():
-    """Test that unfitted model raises appropriate errors"""
-    dt = DecisionTree()
-    X = np.array([[1, 1], [2, 2]])
-    y = np.array([0, 1])
-    
-    # All methods should raise errors before fitting
-    with pytest.raises(ValueError, match="Model must be fitted"):
-        dt.predict(X)
-    
-    with pytest.raises(ValueError, match="Model must be fitted"):
-        dt.predict_proba(X)
-    
-    with pytest.raises(ValueError, match="Model must be fitted"):
-        dt.score(X, y)
 
 def test_predict_consistency():
     """Test prediction consistency"""

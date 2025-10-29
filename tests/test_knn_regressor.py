@@ -22,7 +22,7 @@ def test_distance_functions():
 
     # Euclidean
     euclidean_dist = KNNRegressor.euclidean_distance(point1, point2)
-    assert abs(euclidean_dist - 5.0) < 1e-9
+    assert euclidean_dist == 5.0
 
     # Manhattan
     manhattan_dist = KNNRegressor.manhattan_distance(point1, point2)

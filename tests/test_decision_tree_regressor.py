@@ -2,6 +2,24 @@ from src.ml_code.decision_tree_regressor import DecisionTreeRegressor
 import numpy as np
 import pytest
 
+"""list all test functions in the file
+1. test_decision_tree_regressor
+2. test_impurity_functions
+3. test_unfitted_model_errors
+4. test_predict_consistency
+5. test_different_criteria
+6. test_different_max_depths
+7. test_score_method
+8. test_fit_predict
+9. test_tree_properties
+10. test_min_samples_constraints
+11. test_leaf_values
+12. test_parameter_management
+13. test_edge_cases
+14. test_regression_accuracy
+15. test_information_gain
+"""
+
 def test_decision_tree_regressor():
     """Test basic Decision Tree Regressor functionality"""
     X = np.array([[1, 1], [1, 2], [2, 1], [2, 2],  # Lower values
@@ -13,6 +31,21 @@ def test_decision_tree_regressor():
     
     assert dt.tree_ is not None
     assert dt.is_fitted_ == True
+
+
+def test_unfitted_model_errors():
+    """Test that unfitted model raises appropriate errors"""
+    dt = DecisionTreeRegressor()
+    X = np.array([[1, 1], [2, 2]])
+    y = np.array([10, 20])
+    
+    # All methods should raise errors before fitting
+    with pytest.raises(ValueError, match="Model must be fitted before making predictions"):
+        dt.predict(X)
+    
+    with pytest.raises(ValueError, match="Model must be fitted before making predictions"):
+        dt.score(X, y)
+
 
 def test_impurity_functions():
     """Test impurity calculation functions"""
@@ -31,19 +64,6 @@ def test_impurity_functions():
     # Test with empty array
     assert DecisionTreeRegressor.compute_mse(np.array([])) == 0.0
     assert DecisionTreeRegressor.compute_mae(np.array([])) == 0.0
-
-def test_unfitted_model_errors():
-    """Test that unfitted model raises appropriate errors"""
-    dt = DecisionTreeRegressor()
-    X = np.array([[1, 1], [2, 2]])
-    y = np.array([10, 20])
-    
-    # All methods should raise errors before fitting
-    with pytest.raises(ValueError, match="Model must be fitted before making predictions"):
-        dt.predict(X)
-    
-    with pytest.raises(ValueError, match="Model must be fitted before making predictions"):
-        dt.score(X, y)
 
 def test_predict_consistency():
     """Test prediction consistency"""
